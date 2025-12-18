@@ -9,9 +9,9 @@ jobs:
         with:
           python-version: '3.10'
       - name: Install Libs
-        run: pip install pandas openpyxl pyinstaller
+        run: pip install pandas openpyxl tkinterdnd2 pyinstaller
       - name: Build
-        run: pyinstaller --onefile --name "MyExcelTool" main.py
+        run: pyinstaller --onefile --noconsole --collect-all tkinterdnd2 --name "MyExcelTool" main.py
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
