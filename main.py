@@ -17,53 +17,53 @@ from openpyxl.styles import PatternFill, Font
 def run_feature_1(source_path, ref_path):
 
 
-    source_all = pd.read_excel(source_path, sheet_name=None)
-
-    ref_all = pd.read_excel(ref_path, sheet_name=None)
+    source_all = pd.read_excel(source_path, sheet_name=None)
+    
+    ref_all = pd.read_excel(ref_path, sheet_name=None)
 
     
 
-    source_sheets = list(source_all.keys())
+    source_sheets = list(source_all.keys())
 
-    ref_sheets = list(ref_all.keys())
-
-
-
-    # [비교 기준] 참고파일: Sub Item / Entry ID 결합 (첫 번째 시트)
-
-    df_ref = ref_all[ref_sheets[0]]
-
-    df_ref['KEY'] = df_ref["Sub Item"].astype(str) + "/" + df_ref["Entry ID"].astype(str)
+    ref_sheets = list(ref_all.keys())
 
 
 
-    # 업데이트가 필요한 시트 번호들 (2번째=index 1, 3번째=index 2)
+    # [비교 기준] 참고파일: Sub Item / Entry ID 결합 (첫 번째 시트)
 
-    target_sheet_indices = [1, 2]
+    df_ref = ref_all[ref_sheets[0]]
 
-    updated_cells = {} # 변경된 셀의 위치를 기억 (시트명: [(행, 열), ...])
+    df_ref['KEY'] = df_ref["Sub Item"].astype(str) + "/" + df_ref["Entry ID"].astype(str)
 
 
 
-    for idx in target_sheet_indices:
+    # 업데이트가 필요한 시트 번호들 (2번째=index 1, 3번째=index 2)
 
-        if len(source_sheets) > idx:
+    target_sheet_indices = [1, 2]
 
-            sheet_name = source_sheets[idx]
+    updated_cells = {} # 변경된 셀의 위치를 기억 (시트명: [(행, 열), ...])
 
-            df = source_all[sheet_name]
 
-            
 
-            # Mandatory 열 위치 확인
+    for idx in target_sheet_indices:
 
-            if 'Mandatory' not in df.columns: continue
+        if len(source_sheets) > idx:
 
-            mnd_col_idx = df.columns.get_loc('Mandatory')
+            sheet_name = source_sheets[idx]
 
-            
+            df = source_all[sheet_name]
 
-            updated_cells[sheet_name] = []
+
+
+            # Mandatory 열 위치 확인
+
+            if 'Mandatory' not in df.columns: continue
+
+            mnd_col_idx = df.columns.get_loc('Mandatory')
+
+
+
+            updated_cells[sheet_name] = []
 
 
 
