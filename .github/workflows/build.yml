@@ -1,20 +1,21 @@
 name: Build-EXE
 on: [push]
 jobs:
-  build:
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Setup-Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.10'
-      - name: Install-Package
-        run: pip install pyinstaller pandas openpyxl tkinterdnd2
-      - name: Create-EXE
-        run: pyinstaller --onefile --noconsole --collect-all tkinterdnd2 --name "MyTool" main.py
-      - name: Upload
-        uses: actions/upload-artifact@v3
-        with:
-          name: MyTool-Result
-          path: dist/MyTool.exe
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      - name: Install Libs
+        run: pip install pyinstaller pandas openpyxl tkinterdnd2
+      - name: Build
+        run: pyinstaller --onefile --noconsole --collect-all tkinterdnd2 --name "MyTool" main.py
+      - name: Upload
+        uses: actions/upload-artifact@v3
+        with:
+          name: MyTool-Result
+          path: dist/MyTool.exe
