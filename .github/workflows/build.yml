@@ -10,30 +10,30 @@ jobs:
 
     steps:
 
-    - uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
-    - name: Setup-Python
+      - name: Setup-Python
 
-      uses: actions/setup-python@v4
+        uses: actions/setup-python@v4
 
-      with:
+        with:
 
-        python-version: '3.10'
+          python-version: '3.10'
 
-    - name: Install-Package
+      - name: Install-Package
 
-      run: pip install pyinstaller pandas openpyxl tkinterdnd2
+        run: pip install pyinstaller pandas openpyxl tkinterdnd2
 
-    - name: Create-EXE
+      - name: Create-EXE
 
-      run: pyinstaller --onefile --noconsole --collect-all tkinterdnd2 --name "MyTool" main.py
+        run: pyinstaller --onefile --noconsole --collect-all tkinterdnd2 --name "MyTool" main.py
 
-    - name: Upload
+      - name: Upload
 
-      uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v3
 
-      with:
+        with:
 
-        name: MyTool-Result
+          name: MyTool-Result
 
-        path: dist/MyTool.exe
+          path: dist/MyTool.exe
