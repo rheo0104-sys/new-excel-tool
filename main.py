@@ -2,91 +2,107 @@ import pandas as pd
 import openpyxl
 from openpyxl.styles import PatternFill, Font
 import tkinter as tk
-from tkinter import filedialog, messagebox
+from tkinter import ttk, messagebox
+from tkinterdnd2 import DND_FILES, TkinterDnD
+import os
 
-def process_excel(source_path, ref_path):
+def process_logic(source_path, ref_path, mode):
     try:
-        # 1. 파일 읽기 (원본은 시트2, 시트3 사용 / 참고파일은 시트1 사용)
         source_wb = openpyxl.load_workbook(source_path)
         ref_df = pd.read_excel(ref_path)
 
-        # 2. 비교 기준(match_key) 생성 함수
-        def make_key(df, col1, col2):
-            return df[col1].astype(str) + "/" + df[col2].astype(str)
+        # 비교 기준: DOMAIN/VARIABLE_ID vs Entry ID/Sub Item
+        ref_df['match_key'] = ref_df['Entry ID'].astype(str) + "/" + ref_df['Sub Item'].astype(str)
+        ref_dict = dict(zip(ref_df['match_key'], ref_df['Status']))
 
-        # 참고파일 키 생성 (Entry ID / Sub Item)
-        ref_df['match_key'] = make_key(ref_df, 'Entry ID', 'Sub Item')
-        ref_dict = dict(zip(ref_df['match_key'], ref_df['Status'])) # Status 값을 가져온다고 가정
-
-        # 3. 원본파일 시트 수정 (Sheet 2, Sheet 3 순회)
-        target_sheets = [source_wb.worksheets[1], source_wb.worksheets[2]] # 2번째, 3번째 시트
-        
         yellow_fill = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")
         red_bold_font = Font(color="FF0000", bold=True)
 
-        for sheet in target_sheets:
-            # 헤더에서 열 위치 찾기
+        # 원본파일의 시트 2, 3 작업
+        for i in [1, 2]:
+            sheet = source_wb.worksheets[i]
             headers = [cell.value for cell in sheet[1]]
-            try:
-                domain_idx = headers.index('DOMAIN')
-                var_id_idx = headers.index('VARIABLE_ID')
-                target_col_idx = headers.index('VAL') # 업데이트할 컬럼 이름이 'VAL'이라 가정
-            except ValueError:
-                continue
+            
+            d_idx = headers.index('DOMAIN')
+            v_idx = headers.index('VARIABLE_ID')
+            t_idx = headers.index('VAL')
 
             for row in sheet.iter_rows(min_row=2):
-                domain_val = str(row[domain_idx].value)
-                var_id_val = str(row[var_id_idx].value)
-                match_key = f"{domain_val}/{var_id_val}"
+                m_key = f"{row[d_idx].value}/{row[v_idx].value}"
+                if m_key in ref_dict:
+                    cell = row[t_idx]
+                    cell.value = ref_dict[m_key]
+                    cell.fill = yellow_fill
+                    cell.font = red_bold_font
 
-                # 참고파일에 해당 키가 있으면 업데이트
-                if match_key in ref_dict:
-                    cell = row[target_col_idx]
-                    cell.value = ref_dict[match_key] # 값 변경
-                    cell.fill = yellow_fill # 노란 배경
-                    cell.font = red_bold_font # 빨간 굵은 글씨
-
-        # 4. 저장
-        output_name = "Final_Result.xlsx"
+        # --- 파일명 설정 부분 ---
+        base_name = os.path.splitext(source_path)[0] # 확장자 제거
+        output_name = f"{base_name}_updated.xlsx"    # _updated 붙이기
+        # -----------------------
+        
         source_wb.save(output_name)
         return output_name
-
     except Exception as e:
         return str(e)
 
-# --- GUI 부분 ---
-def select_file(entry):
-    path = filedialog.askopenfilename(filetypes=[("Excel files", "*.xlsx *.xls")])
-    entry.delete(0, tk.END)
-    entry.insert(0, path)
+# --- GUI 레이아웃 (그림 반영) ---
+root = TkinterDnD.Tk()
+root.title("Excel Professional Tool")
+root.geometry("600x450")
 
-def run():
-    s = entry_source.get()
-    r = entry_ref.get()
-    if not s or not r:
-        messagebox.showwarning("경고", "파일을 둘 다 선택해주세요.")
+# ① 기능 선택
+tk.Label(root, text="① 수행할 기능을 선택하세요", font=('Arial', 10, 'bold')).pack(pady=10)
+mode_combo = ttk.Combobox(root, values=["데이터 업데이트", "값 비교 검증"], state="readonly", width=50)
+mode_combo.pack()
+mode_combo.current(0)
+
+file_frame = tk.Frame(root)
+file_frame.pack(pady=20)
+
+# ② 원본파일 (2번 파일)
+frame2 = tk.LabelFrame(file_frame, text="② 원본파일 드래그", width=250, height=150)
+frame2.pack_propagate(False)
+frame2.pack(side="left", padx=10)
+label2 = tk.Label(frame2, text="원본 파일을 던지세요", fg="gray")
+label2.pack(expand=True)
+
+# ③ 참고파일 (3번 파일)
+frame3 = tk.LabelFrame(file_frame, text="③ 참고파일 드래그", width=250, height=150)
+frame3.pack_propagate(False)
+frame3.pack(side="left", padx=10)
+label3 = tk.Label(frame3, text="참고 파일을 던지세요", fg="gray")
+label3.pack(expand=True)
+
+path_source = ""
+path_ref = ""
+
+def handle_drop_source(event):
+    global path_source
+    path_source = event.data.strip('{?}')
+    label2.config(text=os.path.basename(path_source), fg="blue")
+
+def handle_drop_ref(event):
+    global path_ref
+    path_ref = event.data.strip('{?}')
+    label3.config(text=os.path.basename(path_ref), fg="blue")
+
+frame2.drop_target_register(DND_FILES)
+frame2.dnd_bind('<<Drop>>', handle_drop_source)
+frame3.drop_target_register(DND_FILES)
+frame3.dnd_bind('<<Drop>>', handle_drop_ref)
+
+# ④ 실행 버튼
+def start_action():
+    if not path_source or not path_ref:
+        messagebox.showwarning("알림", "파일을 모두 입력해주세요.")
         return
-    
-    result = process_excel(s, r)
-    if result.endswith(".xlsx"):
-        messagebox.showinfo("완료", f"저장 완료: {result}")
+    res = process_logic(path_source, path_ref, mode_combo.get())
+    if res.endswith(".xlsx"):
+        messagebox.showinfo("성공", f"작업 완료!\n파일명: {os.path.basename(res)}")
     else:
-        messagebox.showerror("에러", f"오류 발생: {result}")
+        messagebox.showerror("오류", f"에러: {res}")
 
-root = tk.Tk()
-root.title("Excel Updater")
-root.geometry("400x200")
-
-tk.Label(root, text="원본 파일 (시트 2,3):").pack()
-entry_source = tk.Entry(root, width=50)
-entry_source.pack()
-tk.Button(root, text="찾기", command=lambda: select_file(entry_source)).pack()
-
-tk.Label(root, text="참고 파일 (Entry ID/Sub Item):").pack()
-entry_ref = tk.Entry(root, width=50)
-entry_ref.pack()
-tk.Button(root, text="찾기", command=lambda: select_file(entry_ref)).pack()
-
-tk.Button(root, text="실행하기", command=run, bg="green", fg="white").pack(pady=10)
+btn_run = tk.Button(root, text="④ 실행하기", command=start_action, bg="#2ecc71", fg="white", font=('Arial', 12, 'bold'), width=15)
+btn_run.pack(pady=20)
 
 root.mainloop()
