@@ -16,7 +16,6 @@ from openpyxl.styles import PatternFill, Font
 
 def run_feature_1(source_path, ref_path):
 
-    # 1. 파일 읽기
 
     source_all = pd.read_excel(source_path, sheet_name=None)
 
