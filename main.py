@@ -5,26 +5,41 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from tkinterdnd2 import DND_FILES, TkinterDnD
 import os
-import sys # 추가: PyInstaller 경로 처리를 위해 필요
+import sys
 import re
 
-# --- [PyInstaller 리소스 경로 인식 함수 추가] ---
+# --- [PyInstaller 리소스 경로 인식 함수] ---
 def resource_path(relative_path):
-    """ 실행 파일로 빌드되었을 때와 일반 파이썬으로 실행될 때의 상대 경로를 모두 지원 """
     try:
-        # PyInstaller가 임시로 압축을 푸는 폴더 경로
         base_path = sys._MEIPASS
     except Exception:
         base_path = os.path.abspath(".")
     return os.path.join(base_path, relative_path)
 
 # --- [로고 컬러 테마 정의] ---
-COLOR_BG = "#F4F7F9"        # 가볍고 깔끔한 배경 라이트 그레이/블루
-COLOR_WHITE = "#FFFFFF"     # 카드 배경
-COLOR_PRIMARY = "#00AEEF"   # Dream Blue (로고 메인 컬러)
-COLOR_SECONDARY = "#00A99D" # Teal Green (로고 포인트 컬러)
-COLOR_TEXT = "#333333"      # 텍스트 다크 그레이
-COLOR_BORDER = "#D1D9E0"    # 부드러운 테두리 색상
+COLOR_BG = "#F4F7F9"
+COLOR_WHITE = "#FFFFFF"
+COLOR_PRIMARY = "#00AEEF"
+COLOR_SECONDARY = "#00A99D"
+COLOR_TEXT = "#333333"
+COLOR_BORDER = "#D1D9E0"
+
+# ---------------------------------------------------------
+# [핵심 패치] 데이터 정규화 함수 (NaN, 소수점, 대소문자 방어)
+# ---------------------------------------------------------
+def clean_val(val):
+    """빈 값, 소수점, 대소문자, 판다스 NaN 등을 완벽하게 통일하는 함수"""
+    if pd.isna(val) or val is None:
+        return ""
+    
+    v = str(val).strip().upper()
+    
+    if v == "NAN": # 판다스가 텍스트로 'nan'을 만들었을 경우 방어
+        return ""
+    if v.endswith(".0"): # 숫자형이 1.0 처럼 변환되었을 경우 방어 (1.0 -> 1)
+        v = v[:-2]
+        
+    return v
 
 def process_logic(source_path, ref_path):
     try:
@@ -35,13 +50,13 @@ def process_logic(source_path, ref_path):
         red_font = Font(color="FF0000", bold=True)
 
         # ---------------------------------------------------------
-        # [데이터 매칭 최적화] "비교 기준" 캐싱 (DOMAIN/VARIABLE_ID vs Entry ID/Sub Item)
+        # [데이터 매칭 최적화] "비교 기준" 캐싱
         # ---------------------------------------------------------
         ref_data_map = {}
         for _, r_row in ref_df.iterrows():
-            eid = str(r_row.get('Entry ID', '')).strip()
-            sub = str(r_row.get('Sub Item', '')).strip()
-            dmq = str(r_row.get('Default Missing Query', '')).strip().upper()
+            eid = clean_val(r_row.get('Entry ID'))
+            sub = clean_val(r_row.get('Sub Item'))
+            dmq = clean_val(r_row.get('Default Missing Query'))
             
             비교_기준 = f"{eid}/{sub}"
             ref_data_map[비교_기준] = {"DMQ": dmq, "Sub Item": sub}
@@ -75,9 +90,9 @@ def process_logic(source_path, ref_path):
                 return f"DB Specification 시트 헤더 오류: {str(e)}"
 
             for row in ws1.iter_rows(min_row=2):
-                domain = str(row[d1_idx].value).strip() if row[d1_idx].value else ""
-                vid = str(row[v1_idx].value).strip() if row[v1_idx].value else ""
-                layout = str(row[l1_idx].value).strip() if row[l1_idx].value else ""
+                domain = clean_val(row[d1_idx].value)
+                vid = clean_val(row[v1_idx].value)
+                layout = clean_val(row[l1_idx].value)
                 target = row[m1_idx]
                 
                 old_val = str(target.value).strip() if target.value else ""
@@ -115,9 +130,9 @@ def process_logic(source_path, ref_path):
                 pass 
             else:
                 for row in ws2.iter_rows(min_row=2):
-                    domain_val = str(row[d2_idx].value).strip() if row[d2_idx].value else ""
-                    vid_val = str(row[v2_idx].value).strip() if row[v2_idx].value else ""
-                    sub_val = str(row[s2_idx].value).strip() if row[s2_idx].value else ""
+                    domain_val = clean_val(row[d2_idx].value)
+                    vid_val = clean_val(row[v2_idx].value)
+                    sub_val = clean_val(row[s2_idx].value)
                     
                     비교_기준_원본 = f"{domain_val}/{vid_val}"
                     if sub_val:
@@ -143,21 +158,19 @@ def process_logic(source_path, ref_path):
     except Exception as e:
         return f"실행 중 오류 발생: {str(e)}"
 
-# --- [UI 디자인 고도화 (DreamCIS Theme)] ---
+# --- [UI 영역] ---
 root = TkinterDnD.Tk()
 root.title("DreamCIS DB Specification Optimizer")
 
-# --- [타이틀바 아이콘 적용 추가] ---
 try:
     root.iconbitmap(resource_path('app.ico'))
 except:
-    pass # 아이콘 파일이 없거나 지원하지 않는 OS일 경우 자연스럽게 무시
+    pass 
 
 root.geometry("640x520")
 root.configure(bg=COLOR_BG)
 root.resizable(False, False)
 
-# 상단 로고 영역
 header_frame = tk.Frame(root, bg=COLOR_WHITE, height=60)
 header_frame.pack(fill="x", side="top")
 header_frame.pack_propagate(False)
@@ -170,11 +183,9 @@ logo_label_2.pack(side="left", pady=10)
 title_desc = tk.Label(header_frame, text="Data Management System", font=('Arial', 10), fg="#A0A0A0", bg=COLOR_WHITE)
 title_desc.pack(side="right", padx=20, pady=20)
 
-# 메인 프레임
 main_frame = tk.Frame(root, bg=COLOR_BG)
 main_frame.pack(fill="both", expand=True, padx=30, pady=20)
 
-# 작업 모드 선택
 func_frame = tk.Frame(main_frame, bg=COLOR_BG)
 func_frame.pack(fill="x", pady=(0, 20))
 
@@ -187,17 +198,14 @@ mode_combo = ttk.Combobox(func_frame, values=["DB Specification Mandatory Auto-U
 mode_combo.pack(fill="x")
 mode_combo.current(0)
 
-# 드래그 앤 드롭 영역 (컨테이너)
 drop_container = tk.Frame(main_frame, bg=COLOR_BG)
 drop_container.pack(fill="x", pady=10)
 
 path_source, path_ref = "", ""
 
 def create_drop_box(parent, title, drop_func, side_pack):
-    # 가로(좌우) 배치를 위해 고정 너비 설정
     border_frame = tk.Frame(parent, bg=COLOR_BORDER, width=280, height=160)
     border_frame.pack_propagate(False)
-    # side_pack 파라미터에 따라 left / right로 밀착 정렬 수행
     border_frame.pack(side=side_pack, padx=(0, 10) if side_pack=="left" else (10, 0))
     
     inner_frame = tk.Frame(border_frame, bg=COLOR_WHITE)
@@ -230,11 +238,9 @@ def drop_ref(e, border, icon, name):
     icon.config(text="✓", fg=COLOR_SECONDARY)
     name.config(text=os.path.basename(path_ref), fg=COLOR_TEXT, font=('맑은 고딕', 9, 'bold'))
 
-# 변경 요청 사항 적용: 라벨명 변경 및 좌(left)/우(right) 구조 배치 명시
 create_drop_box(drop_container, "DB specification", drop_src, "left")
 create_drop_box(drop_container, "Entry search", drop_ref, "right")
 
-# 실행 버튼
 def run_process():
     if not path_source or not path_ref:
         messagebox.showwarning("파일 확인", "모든 파일을 드롭해주세요.")
