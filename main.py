@@ -5,7 +5,18 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from tkinterdnd2 import DND_FILES, TkinterDnD
 import os
+import sys # 추가: PyInstaller 경로 처리를 위해 필요
 import re
+
+# --- [PyInstaller 리소스 경로 인식 함수 추가] ---
+def resource_path(relative_path):
+    """ 실행 파일로 빌드되었을 때와 일반 파이썬으로 실행될 때의 상대 경로를 모두 지원 """
+    try:
+        # PyInstaller가 임시로 압축을 푸는 폴더 경로
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
 
 # --- [로고 컬러 테마 정의] ---
 COLOR_BG = "#F4F7F9"        # 가볍고 깔끔한 배경 라이트 그레이/블루
@@ -135,6 +146,13 @@ def process_logic(source_path, ref_path):
 # --- [UI 디자인 고도화 (DreamCIS Theme)] ---
 root = TkinterDnD.Tk()
 root.title("DreamCIS DB Specification Optimizer")
+
+# --- [타이틀바 아이콘 적용 추가] ---
+try:
+    root.iconbitmap(resource_path('app.ico'))
+except:
+    pass # 아이콘 파일이 없거나 지원하지 않는 OS일 경우 자연스럽게 무시
+
 root.geometry("640x520")
 root.configure(bg=COLOR_BG)
 root.resizable(False, False)
