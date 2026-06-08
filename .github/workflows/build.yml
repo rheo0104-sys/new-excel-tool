@@ -11,7 +11,7 @@ jobs:
       - name: Install Libs
         run: pip install pandas openpyxl tkinterdnd2 pyinstaller
       - name: Build
-        run: pyinstaller --onefile --noconsole --collect-all tkinterdnd2 --name "MyExcelTool" main.py
+        run: pyinstaller --onefile --noconsole --collect-all tkinterdnd2 --icon="app.ico" --add-data "app.ico;." --name "DB Specification Optimizer" main.py
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
